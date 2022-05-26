@@ -1,16 +1,20 @@
 from email.mime import image
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtWidgets import QPushButton
+from PyQt6 import QtWidgets, QtGui
+from PyQt6.QtWidgets import QPushButton
 from UI import Ui_MainWindow
 import sys
 import os
 import glob
+
+
 
 typeList = ['bed', 'trash can', 'cabinet', 'bathtub', 'bookshelf', 'chair', 'clock', 'dishwasher', 'faucet', 'file cabinet', 'lamp'\
             'pillow', 'sofa', 'table']
 
 test1 = ['ss','sss','ss','ssa']
 test2 = ['ttt','tqt', 'ttttttt']
+
+
 
 class QCustomQWidget (QtWidgets.QWidget):
     # TODO: Need to change to buttons
@@ -25,6 +29,7 @@ class QCustomQWidget (QtWidgets.QWidget):
         self.iconQLabel      = QtWidgets.QLabel()
         self.allQHBoxLayout.addWidget(self.iconQLabel, 0)
         self.allQHBoxLayout.addLayout(self.textQVBoxLayout, 1)
+
         self.setLayout(self.allQHBoxLayout)
         # setStyleSheet
         self.textUpQLabel.setStyleSheet('''
@@ -33,6 +38,7 @@ class QCustomQWidget (QtWidgets.QWidget):
         self.textDownQLabel.setStyleSheet('''
             color: rgb(255, 0, 0);
         ''')
+
 
     def setTextUp (self, text):
         self.textUpQLabel.setText(text)
@@ -83,4 +89,4 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication([])
     window = MainWindow()
     window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

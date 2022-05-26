@@ -28,7 +28,8 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
         self.faceCount = 0
         mesh = trimesh.load("00.obj")
         self.flushBufferFromMesh(mesh.vertices, mesh.faces)
-        self.shaderProgram = None
+        self.meshShaderProgram = None
+        self.edgeShaderProgram = None
 
     def sizeHint(self):
         return QSize(400, 300)
@@ -37,10 +38,11 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
         GL.glClearColor(0.8, 0.8, 0.8, 0.0)
 
         GL.glEnable(GL.GL_DEPTH_TEST)
+
         vertShader = QOpenGLShader(QOpenGLShader.ShaderTypeBit.Vertex)
-        vertShader.compileSourceFile("shader.vs")
+        vertShader.compileSourceFile("mesh_shader.vs")
         fragShader = QOpenGLShader(QOpenGLShader.ShaderTypeBit.Fragment)
-        fragShader.compileSourceFile("shader.fs")
+        fragShader.compileSourceFile("mesh_shader.fs")
 
         shaderProgram = QOpenGLShaderProgram()
         shaderProgram.addShader(vertShader)
@@ -49,20 +51,35 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
         print("Compile shader state:", "Success" if success else "Fail")
         shaderProgram.bind()
 
-        self.shaderProgram = shaderProgram
+        self.meshShaderProgram = shaderProgram
 
-        near_plane = 1
-        far_plane = 200
+        vertShader = QOpenGLShader(QOpenGLShader.ShaderTypeBit.Vertex)
+        vertShader.compileSourceFile("edge_shader.vs")
+        fragShader = QOpenGLShader(QOpenGLShader.ShaderTypeBit.Fragment)
+        fragShader.compileSourceFile("edge_shader.fs")
+
+        shaderProgram = QOpenGLShaderProgram()
+        shaderProgram.addShader(vertShader)
+        shaderProgram.addShader(fragShader)
+        success = shaderProgram.link()
+        print("Compile shader state:", "Success" if success else "Fail")
+        shaderProgram.bind()
+
+        self.edgeShaderProgram = shaderProgram
+
+        near_plane = 0.1
+        far_plane = 100
         angle = 45
         aspect = 400 / 300
 
         self.modelMatrix = QtGui.QMatrix4x4()
         self.modelMatrix.setToIdentity()
-        self.modelMatrix.scale(0.01)
+        self.modelMatrix.scale(0.005)
 
         self.eyePosition = QtGui.QVector3D(0.0, 1.0, 0.0)
         self.centerPosition = QtGui.QVector3D(0.0, 0.0, 0.0)
         self.upDirection = QtGui.QVector3D(0.0, 0.0, 1.0)
+        self.vecLength = 2.0
         self.yaw, self.pitch = 0, 0
         self.viewMatrix = QtGui.QMatrix4x4()
         self.viewMatrix.setToIdentity()
@@ -95,20 +112,37 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
         self.pitch += dy
         yaw = math.radians(self.yaw)
         pitch = math.radians(self.pitch)
-        vecLength = 2.0
-        self.eyePosition = QtGui.QVector3D(vecLength * -math.cos(pitch) * math.cos(yaw), vecLength * -math.sin(pitch),
-                                               vecLength * -math.cos(pitch) * math.sin(yaw))
+        self.eyePosition = QtGui.QVector3D(self.vecLength * -math.cos(pitch) * math.cos(yaw), self.vecLength * -math.sin(pitch),
+                                               self.vecLength * -math.cos(pitch) * math.sin(yaw))
         self.viewMatrix.setToIdentity()
         self.viewMatrix.lookAt(self.eyePosition, self.centerPosition, self.upDirection)
         self.prevMouseX = event.position().x()
         self.prevMouseY = event.position().y()
-        self.paintGL()
         self.update()
+
+    def wheelEvent(self, event):
+        if self.vecLength + event.angleDelta().y() / 360 < 0.01 or self.vecLength + event.angleDelta().y() / 360 > 100.0:
+            pass
+        else:
+            self.vecLength += event.angleDelta().y() / 600
+            yaw = math.radians(self.yaw)
+            pitch = math.radians(self.pitch)
+            self.eyePosition = QtGui.QVector3D(self.vecLength * -math.cos(pitch) * math.cos(yaw),
+                                               self.vecLength * -math.sin(pitch),
+                                               self.vecLength * -math.cos(pitch) * math.sin(yaw))
+            self.viewMatrix.setToIdentity()
+            self.viewMatrix.lookAt(self.eyePosition, self.centerPosition, self.upDirection)
+            self.update()
 
     def flushBufferFromMesh(self, vertices, faces):
         self.vertices = vertices
         self.faces = faces
         self.faceCount = len(faces) * 3
+        import numpy as np
+        f = np.array(self.faces)
+        print(f[:, 0:2].shape, f[:, 1:3].shape, f[:, 0:4:2].shape)
+        self.edges = np.vstack((f[:, 0:2], f[:, 1:3], f[:, 0:4:2]))
+        self.edgeCount = len(self.edges) * 2
         # self.vertices = [[0.5, 0.5, 0.0], [-0.5, 0.5, 0.0], [0.5, -0.5, 0.0]]
         # self.faces = [[0, 1, 2]]
         # self.faceCount = len(self.faces) * 3
@@ -133,8 +167,8 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
 
     def _draw(self):
         if len(self.vertices) > 0 and len(self.faces) > 0:
-            self.shaderProgram.bind()
-            self.shaderProgram.setUniformValue("mvp_matrix", self.projectionMatrix * self.viewMatrix * self.modelMatrix)
+            self.meshShaderProgram.bind()
+            self.meshShaderProgram.setUniformValue("mvp_matrix", self.projectionMatrix * self.viewMatrix * self.modelMatrix)
 
             GL.glEnableVertexAttribArray(0)
 
@@ -152,8 +186,28 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
 
             # self.index_buf.release()
             # self.vertex_buf.release()
-            self.shaderProgram.release()
+            self.meshShaderProgram.release()
 
+            self.edgeShaderProgram.bind()
+            self.edgeShaderProgram.setUniformValue("mvp_matrix", self.projectionMatrix * self.viewMatrix * self.modelMatrix)
+
+            GL.glEnableVertexAttribArray(0)
+
+            # self.vertex_buf.bind()
+            # self.index_buf.bind()
+            # vertex_loc = self.shaderProgram.attributeLocation("position")
+            # self.shaderProgram.enableAttributeArray(vertex_loc)
+            # self.shaderProgram.setAttributeBuffer(vertex_loc, GL.GL_FLOAT, 0, 3)
+
+            GL.glVertexAttribPointer(0, 3, GL.GL_FLOAT, GL.GL_FALSE, 0, self.vertices)
+            GL.glDrawElements(GL.GL_LINES, self.edgeCount, GL.GL_UNSIGNED_INT, self.edges)
+            # GL.glDrawElements(GL.GL_TRIANGLES, self.faceCount, GL.GL_UNSIGNED_INT, None)
+
+            GL.glDisableVertexAttribArray(0)
+
+            # self.index_buf.release()
+            # self.vertex_buf.release()
+            self.edgeShaderProgram.release()
 
 
 class Ui_MainWindow(object):

@@ -81,12 +81,13 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
         self.modelMatrix.setToIdentity()
         self.modelMatrix.scale(0.005)
 
-        self.eyePosition = QtGui.QVector3D(0.0, 1.0, 0.0)
         self.centerPosition = QtGui.QVector3D(0.0, 0.0, 0.0)
         self.upDirection = QtGui.QVector3D(0.0, 0.0, 1.0)
-        self.vecLength = 2.0
         self.yaw, self.pitch = 0, 0
+        self.vecLength = 2.0
+        self.eyePosition = QtGui.QVector3D(0, 0, 0)
         self.viewMatrix = QtGui.QMatrix4x4()
+        self.updateViewMatrix()
         self.viewMatrix.setToIdentity()
         self.viewMatrix.lookAt(self.eyePosition, self.centerPosition, self.upDirection)
 
@@ -110,32 +111,30 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
         self.prevMouseX = event.position().x()
         self.prevMouseY = event.position().y()
 
+    def updateViewMatrix(self):
+        yaw = math.radians(self.yaw)
+        pitch = math.radians(self.pitch)
+        self.eyePosition = QtGui.QVector3D(self.vecLength * math.cos(pitch) * math.cos(yaw),
+                                           self.vecLength * math.cos(pitch) * math.sin(yaw),
+                                           self.vecLength * math.sin(pitch))
+        self.viewMatrix.setToIdentity()
+        self.viewMatrix.lookAt(self.eyePosition, self.centerPosition, self.upDirection)
+
     def mouseMoveEvent(self, event):
         dx, dy = event.position().x() - self.prevMouseX, self.prevMouseY - event.position().y()
         self.yaw += dx
         self.pitch += dy
-        yaw = math.radians(self.yaw)
-        pitch = math.radians(self.pitch)
-        self.eyePosition = QtGui.QVector3D(self.vecLength * math.cos(pitch) * math.cos(yaw),
-                                               self.vecLength * math.cos(pitch) * math.sin(yaw), self.vecLength * math.sin(pitch))
-        self.viewMatrix.setToIdentity()
-        self.viewMatrix.lookAt(self.eyePosition, self.centerPosition, self.upDirection)
+        self.updateViewMatrix()
         self.prevMouseX = event.position().x()
         self.prevMouseY = event.position().y()
         self.update()
 
     def wheelEvent(self, event):
-        if self.vecLength + event.angleDelta().y() / 360 < 0.01 or self.vecLength + event.angleDelta().y() / 360 > 100.0:
+        if self.vecLength - event.angleDelta().y() / 360 < 0.01 or self.vecLength - event.angleDelta().y() / 360 > 100.0:
             pass
         else:
-            self.vecLength += event.angleDelta().y() / 600
-            yaw = math.radians(self.yaw)
-            pitch = math.radians(self.pitch)
-            self.eyePosition = QtGui.QVector3D(self.vecLength * -math.cos(pitch) * math.cos(yaw),
-                                               self.vecLength * -math.sin(pitch),
-                                               self.vecLength * -math.cos(pitch) * math.sin(yaw))
-            self.viewMatrix.setToIdentity()
-            self.viewMatrix.lookAt(self.eyePosition, self.centerPosition, self.upDirection)
+            self.vecLength -= event.angleDelta().y() / 600
+            self.updateViewMatrix()
             self.update()
 
     def flushBufferFromMesh(self, vertices, faces):
@@ -145,7 +144,8 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
         import numpy as np
         f = np.array(self.faces)
         self.normals = np.array(self.vertices)[f]
-        self.normals = np.cross(self.normals[:, 0, :] - self.normals[:, 1, :], self.normals[:, 2, :] - self.normals[:, 1, :], axis=1)
+        self.normals = np.cross(self.normals[:, 0, :] - self.normals[:, 1, :],
+                                self.normals[:, 2, :] - self.normals[:, 1, :], axis=1)
         # normal per face
         self.normals = np.transpose(self.normals.T / np.linalg.norm(self.normals, axis=1))
         self.normals_per_vertices = np.zeros_like(self.vertices)
@@ -153,7 +153,8 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
             self.normals_per_vertices[face[0]] += self.normals[face_id]
             self.normals_per_vertices[face[1]] += self.normals[face_id]
             self.normals_per_vertices[face[2]] += self.normals[face_id]
-        self.normals_per_vertices = np.transpose(self.normals_per_vertices.T / np.linalg.norm(self.normals_per_vertices, axis=1))
+        self.normals_per_vertices = np.transpose(
+            self.normals_per_vertices.T / np.linalg.norm(self.normals_per_vertices, axis=1))
 
         self.edges = np.vstack((f[:, 0:2], f[:, 1:3], f[:, 0:4:2]))
         self.edgeCount = len(self.edges) * 2
@@ -182,7 +183,8 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
     def _draw(self):
         if len(self.vertices) > 0 and len(self.faces) > 0:
             self.meshShaderProgram.bind()
-            self.meshShaderProgram.setUniformValue("mvp_matrix", self.projectionMatrix * self.viewMatrix * self.modelMatrix)
+            self.meshShaderProgram.setUniformValue("mvp_matrix",
+                                                   self.projectionMatrix * self.viewMatrix * self.modelMatrix)
             self.meshShaderProgram.setUniformValue("inv_model_matrix", self.modelMatrix.normalMatrix())
             self.meshShaderProgram.setUniformValue("model_matrix", self.modelMatrix)
             self.meshShaderProgram.setUniformValue("eye_position", self.eyePosition)
@@ -213,7 +215,8 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
 
             if self.enableLineDraw == True:
                 self.edgeShaderProgram.bind()
-                self.edgeShaderProgram.setUniformValue("mvp_matrix", self.projectionMatrix * self.viewMatrix * self.modelMatrix)
+                self.edgeShaderProgram.setUniformValue("mvp_matrix",
+                                                       self.projectionMatrix * self.viewMatrix * self.modelMatrix)
 
                 GL.glEnableVertexAttribArray(0)
 
@@ -237,27 +240,66 @@ class GLWidget(QtOpenGLWidgets.QOpenGLWidget):
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1600, 1200)
+        MainWindow.resize(1500, 1000)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
+
+        self.typeLabel = QtWidgets.QLabel(self.centralwidget)
+        self.typeLabel.setGeometry(QtCore.QRect(30, 30, 421, 21))
+        self.typeLabel.setText("Category")
+        self.typeLabel.setObjectName("type label")
         self.typeSelecter = QtWidgets.QListWidget(self.centralwidget)
-        self.typeSelecter.setGeometry(QtCore.QRect(30, 90, 191, 341))
+        self.typeSelecter.setGeometry(QtCore.QRect(30, 50, 120, 341))
         self.typeSelecter.setObjectName("typeSelecter")
-        self.imageDisplay = QtWidgets.QListWidget(self.centralwidget)
-        self.imageDisplay.setGeometry(QtCore.QRect(290, 90, 491, 341))
-        self.imageDisplay.setObjectName("imageDisplay")
+
+        self.inputImageLabel = QtWidgets.QLabel(self.centralwidget)
+        self.inputImageLabel.setGeometry(QtCore.QRect(180, 30, 421, 21))
+        self.inputImageLabel.setText("Input image")
+        self.inputImageLabel.setObjectName("input image label")
+        self.tableWidget = QtWidgets.QTableWidget(self.centralwidget)
+        self.tableWidget.setGeometry(QtCore.QRect(180, 50, 441, 341))
+        self.tableWidget.setObjectName("tableWidget")
+        self.tableWidget.setColumnCount(0)
+        self.tableWidget.setRowCount(0)
+
+        self.geometricTextureLabel = QtWidgets.QLabel(self.centralwidget)
+        self.geometricTextureLabel.setGeometry(QtCore.QRect(30, 421, 421, 21))
+        self.geometricTextureLabel.setText("Geometric texture")
+        self.geometricTextureLabel.setObjectName("geometric texture label")
+        self.tableWidget_2 = QtWidgets.QTableWidget(self.centralwidget)
+        self.tableWidget_2.setGeometry(QtCore.QRect(30, 441, 591, 161))
+        self.tableWidget_2.setObjectName("tableWidget_2")
+        self.tableWidget_2.setColumnCount(0)
+        self.tableWidget_2.setRowCount(0)
+        self.tableWidget_2.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollMode.ScrollPerItem)
+
+        self.label = QtWidgets.QLabel(self.centralwidget)
+        self.label.setGeometry(QtCore.QRect(30, 620, 421, 21))
+        self.label.setText("")
+        self.label.setObjectName("label")
+        self.label_2 = QtWidgets.QLabel(self.centralwidget)
+        self.label_2.setGeometry(QtCore.QRect(30, 792, 171, 21))
+        self.label_2.setText("")
+        self.label_2.setObjectName("label_2")
+        self.pushButton = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton.setGeometry(QtCore.QRect(30, 672, 161, 41))
+        self.pushButton.setObjectName("pushButton")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 20))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1078, 20))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
+        self.statusbar.addPermanentWidget(QtWidgets.QLabel(MainWindow))
+        self.statusProgressBar = QtWidgets.QProgressBar(MainWindow)
+        self.statusbar.addPermanentWidget(self.statusProgressBar)
+
         self.openGLWidget = GLWidget(self.centralwidget)
         # pos_y, pos_x, height, width
-        self.openGLWidget.setGeometry(QtCore.QRect(800, 10, 800, 600))
+        self.openGLWidget.setGeometry(QtCore.QRect(650, 10, 800, 600))
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -265,3 +307,4 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        self.pushButton.setText(_translate("MainWindow", "Start"))

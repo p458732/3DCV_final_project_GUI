@@ -1,47 +1,16 @@
 from email.mime import image
-from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtWidgets import QPushButton
+from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt5.QtWidgets import QPushButton, QTableWidgetItem
 from UI import Ui_MainWindow
 import sys
 import os
 import glob
 
-typeList = ['bed', 'trash can', 'cabinet', 'bathtub', 'bookshelf', 'chair', 'clock', 'dishwasher', 'faucet', 'file cabinet', 'lamp'\
-            'pillow', 'sofa', 'table']
+typeList = ['bed', 'trash can', 'cabinet', 'bookshelf', 'chair', 'clock', 'dishwasher', 'faucet', 'file cabinet', 'lamp', \
+            'pillow', 'sofa', 'table']  #, 'bathtub']
 
-test1 = ['ss','sss','ss','ssa']
-test2 = ['ttt','tqt', 'ttttttt']
 
-class QCustomQWidget (QtWidgets.QWidget):
-    # TODO: Need to change to buttons
-    def __init__ (self, parent = None):
-        super(QCustomQWidget, self).__init__(parent)
-        self.textQVBoxLayout = QtWidgets.QVBoxLayout()
-        self.textUpQLabel    = QtWidgets.QLabel()
-        self.textDownQLabel  = QtWidgets.QLabel()
-        self.textQVBoxLayout.addWidget(self.textUpQLabel)
-        self.textQVBoxLayout.addWidget(self.textDownQLabel)
-        self.allQHBoxLayout  = QtWidgets.QHBoxLayout()
-        self.iconQLabel      = QtWidgets.QLabel()
-        self.allQHBoxLayout.addWidget(self.iconQLabel, 0)
-        self.allQHBoxLayout.addLayout(self.textQVBoxLayout, 1)
-        self.setLayout(self.allQHBoxLayout)
-        # setStyleSheet
-        self.textUpQLabel.setStyleSheet('''
-            color: rgb(0, 0, 255);
-        ''')
-        self.textDownQLabel.setStyleSheet('''
-            color: rgb(255, 0, 0);
-        ''')
 
-    def setTextUp (self, text):
-        self.textUpQLabel.setText(text)
-
-    def setTextDown (self, text):
-        self.textDownQLabel.setText(text)
-
-    def setIcon (self, imagePath):
-        self.iconQLabel.setPixmap(QtGui.QPixmap(imagePath).scaled(64,64))
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -50,31 +19,59 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
         self.ui.typeSelecter.addItems(typeList)
         self.ui.typeSelecter.clicked.connect(self.getTypeSelected)
-
+        currentRowCount = self.ui.tableWidget.rowCount() #necessary even when there are no rows in the table
+        
+        self.ui.tableWidget.setRowCount(5)
+        self.ui.tableWidget.setColumnCount(6)
+        
+        self.ui.tableWidget.verticalHeader().setDefaultSectionSize(64)
+        self.ui.tableWidget.verticalHeader().setVisible(False)
+        self.ui.tableWidget.horizontalHeader().setDefaultSectionSize(64)
+        self.ui.tableWidget.horizontalHeader().setVisible(False)
+        self.ui.tableWidget.setShowGrid(False)
+        self.ui.tableWidget.clicked.connect(self.getImageSelected)
+        self.createButtons(typeList[0])
+        self.ui.label.setText('Current selected image path: ')
+        #@t.imagePath = ''
+        #t.sizeHint
+        #t.setIcon(QtGui.QIcon('./images/bed/1178799.jpeg'))
+        
 
     def createButtons(self, typeName):
         buttons = []
         imagePaths  = glob.glob(os.path.join("./images/" + typeName, "*"))
+        self.ui.tableWidget.setRowCount(0)
+        self.ui.tableWidget.setColumnCount(0)
+
+        self.ui.tableWidget.setRowCount(int(len(imagePaths) / 6) + 1)
+        self.ui.tableWidget.setColumnCount(6)
+        currentRowCount = 0
+        currentColCount = 0
         for imagePath in imagePaths:
-            print(imagePath)
-            myQListWidgetItem = QtWidgets.QListWidgetItem(self.ui.imageDisplay)
-            myCustomQWidget = QCustomQWidget()
-            myCustomQWidget.setIcon(imagePath)
-            myCustomQWidget.setTextUp('s')
-            myCustomQWidget.setTextDown('na')
-            button = QPushButton('', self)
-            button.setIcon(QtGui.QIcon(imagePath))
-            myQListWidgetItem.setSizeHint(myCustomQWidget.sizeHint())
-            self.ui.imageDisplay.addItem(myQListWidgetItem)
-            self.ui.imageDisplay.setItemWidget(myQListWidgetItem, myCustomQWidget)
+            #print(imagePath)
+            t = QTableWidgetItem()
+            t.setData(QtCore.Qt.DecorationRole, QtGui.QPixmap.fromImage(QtGui.QImage(imagePath)).scaled(64,64))
+            t.imagePath = imagePath
+            self.ui.tableWidget.setItem(currentRowCount, currentColCount, t)
+            currentColCount +=1
+            if currentColCount == 6:
+                currentColCount = 0
+                currentRowCount +=1
+            
             #buttons.append(myCustomQWidget)
         return buttons
 
+    def getImageSelected(self, qIndex):
+        
+        
+        self.ui.label.setText('Current selected image path: ' + self.ui.tableWidget.selectedItems()[0].imagePath)
+
+
     def getTypeSelected(self, qIndex):
-        self.ui.imageDisplay.clear()
-        
+        #self.ui.imageDisplay.clear()
+        print(qIndex)
         self.createButtons(typeList[qIndex.row()])
-        
+        self.ui.label.setText('Current selected image path: ')
         #self.ui.imageDisplay.addItems(buttons)
 
 

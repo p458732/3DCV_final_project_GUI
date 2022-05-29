@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
+    <width>1078</width>
     <height>600</height>
    </rect>
   </property>
@@ -24,14 +24,63 @@
      </rect>
     </property>
    </widget>
-   <widget class="QListWidget" name="imageDisplay">
+   <widget class="QTableWidget" name="tableWidget">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>90</y>
+      <width>441</width>
+      <height>341</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
       <x>290</x>
+      <y>440</y>
+      <width>421</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QTableWidget" name="tableWidget_2">
+    <property name="geometry">
+     <rect>
+      <x>770</x>
       <y>90</y>
-      <width>491</width>
+      <width>201</width>
       <height>341</height>
      </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>790</x>
+      <y>440</y>
+      <width>171</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton">
+    <property name="geometry">
+     <rect>
+      <x>480</x>
+      <y>480</y>
+      <width>161</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Start</string>
     </property>
    </widget>
   </widget>
@@ -40,7 +89,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>1078</width>
      <height>20</height>
     </rect>
    </property>

@@ -286,12 +286,20 @@ class Ui_MainWindow(object):
         self.pushButton.setObjectName("pushButton")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1078, 20))
+        # self.menubar.setGeometry(QtCore.QRect(30, 30, 1078, 50))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
+
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
+
+        fileMenu = self.menubar.addMenu("File")
+
+        importImageAction = QtGui.QAction("Import image", MainWindow)
+        fileMenu.addAction(importImageAction)
+        self.MainWindow = MainWindow
+        importImageAction.triggered.connect(self.getFileDialog)
 
         self.statusbar.addPermanentWidget(QtWidgets.QLabel(MainWindow))
         self.statusProgressBar = QtWidgets.QProgressBar(MainWindow)
@@ -303,6 +311,27 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
+        # placeholder
+        self.tableWidgetCount = 0
+
+    def getFileDialog(self):
+        if len(self.typeSelecter.selectedItems()) <= 0:
+            self.statusbar.showMessage("[ERROR] Haven't assign category to open image to.")
+            return
+        typeName = self.typeSelecter.selectedItems()[0].text()
+
+        filePath, type = QtWidgets.QFileDialog.getOpenFileName(
+            self.MainWindow, "Open File", ".", "Images (*.png *.jpg)")
+
+        position = self.tableWidgetCount
+        self.tableWidgetCount += 1
+        self.tableWidget.setRowCount(int(self.tableWidgetCount / 6) + 1)
+        t = QtWidgets.QTableWidgetItem()
+        t.setData(QtCore.Qt.ItemDataRole.DecorationRole,
+                  QtGui.QPixmap.fromImage(QtGui.QImage(filePath)).scaled(64, 64))
+        t.imagePath = filePath
+        self.tableWidget.setItem(position//6, position%6, t)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate

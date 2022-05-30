@@ -74,6 +74,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.tableWidget.setRowCount(int(len(imagePaths) / 6) + 1)
         self.ui.tableWidget.setColumnCount(6)
+        self.ui.tableWidgetCount = len(imagePaths)
         currentRowCount = 0
         currentColCount = 0
         for idx, imagePath in enumerate(imagePaths):

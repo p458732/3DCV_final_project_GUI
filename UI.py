@@ -305,6 +305,20 @@ class Ui_MainWindow(object):
         self.statusProgressBar = QtWidgets.QProgressBar(MainWindow)
         self.statusbar.addPermanentWidget(self.statusProgressBar)
 
+        self.objectSlider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, self.centralwidget)
+        self.objectSlider.setGeometry(QtCore.QRect(260, 672, 300, 30))
+        self.objectSlider.setTickInterval(1)
+        self.objectSlider.setMinimum(0)
+        self.objectSlider.setMaximum(48)
+        self.objectSlider.setObjectName("slider")
+        self.objectSlider.valueChanged[int].connect(self.changeValue)
+        # self.objectSlider.setValue(0)
+
+        self.objectLabel = QtWidgets.QLabel(self.centralwidget)
+        self.objectLabel.setGeometry(QtCore.QRect(200, 672, 50, 21))
+        self.objectLabel.setText("Level: 0")
+        self.objectLabel.setObjectName("object label")
+
         self.openGLWidget = GLWidget(self.centralwidget)
         # pos_y, pos_x, height, width
         self.openGLWidget.setGeometry(QtCore.QRect(650, 10, 800, 600))
@@ -319,8 +333,6 @@ class Ui_MainWindow(object):
         if len(self.typeSelecter.selectedItems()) <= 0:
             self.statusbar.showMessage("[ERROR] Haven't assign category to open image to.")
             return
-        typeName = self.typeSelecter.selectedItems()[0].text()
-
         filePath, type = QtWidgets.QFileDialog.getOpenFileName(
             self.MainWindow, "Open File", ".", "Images (*.png *.jpg)")
 
@@ -332,6 +344,10 @@ class Ui_MainWindow(object):
                   QtGui.QPixmap.fromImage(QtGui.QImage(filePath)).scaled(64, 64))
         t.imagePath = filePath
         self.tableWidget.setItem(position//6, position%6, t)
+
+    def changeValue(self, value):
+        self.objectLabel.setText("Level: " + str(value))
+        # TODO wire extracted object filename, flush mesh from this member function
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
